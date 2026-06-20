@@ -21,26 +21,36 @@ use function oihana\files\path\joinPaths;
  * 2. Joins the base URL with the provided relative path.
  * 3. Optionally appends a trailing slash.
  *
- * Example usage:
- * ```php
- * use Psr\Container\ContainerInterface;
+ * When no container is given, or when the base URL definition is absent, the
+ * base URL falls back to an empty string and only the relative path is returned.
  *
- * $url = documentUrl('uploads/image.png', $container);
- * // returns something like 'https://example.com/uploads/image.png'
- *
- * $urlWithSlash = documentUrl('uploads', $container, 'baseUrl', true);
- * // returns 'https://example.com/uploads/'
- * ```
- *
- * @param string              $path          Relative path of the document (default: empty string).
- * @param ContainerInterface|null $container Optional DI container to fetch the base URL from.
- * @param string|null         $definition    Key used to fetch the base URL from the container (default: 'baseUrl').
- * @param bool                $trailingSlash Whether to append a trailing slash to the resulting URL (default: false).
+ * @param string                  $path          Relative path of the document (default: empty string).
+ * @param ContainerInterface|null $container     Optional DI container to fetch the base URL from.
+ * @param string|null             $definition    Key used to fetch the base URL from the container (default: 'baseUrl').
+ * @param bool                    $trailingSlash Whether to append a trailing slash to the resulting URL (default: false).
  *
  * @return string The fully resolved document URL.
  *
- * @throws ContainerExceptionInterface If an error occurs while retrieving the base URL from the container.
- * @throws NotFoundExceptionInterface If the base URL definition is not found in the container.
+ * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+ * @throws NotFoundExceptionInterface  If no entry is found for the requested identifier in the container.
+ *
+ * @example
+ * ```php
+ * use Psr\Container\ContainerInterface;
+ *
+ * use function oihana\models\helpers\documentUrl;
+ *
+ * // Assuming the container resolves 'baseUrl' to 'https://example.com'
+ * $url = documentUrl( 'uploads/image.png', $container ) ;
+ * // 'https://example.com/uploads/image.png'
+ *
+ * $urlWithSlash = documentUrl( 'uploads', $container, 'baseUrl', true ) ;
+ * // 'https://example.com/uploads/'
+ *
+ * // Without a container, only the relative path is returned.
+ * $relative = documentUrl( 'uploads/image.png' ) ;
+ * // 'uploads/image.png'
+ * ```
  *
  * @package oihana\models\helpers
  * @author  Marc Alcaraz (ekameleon)

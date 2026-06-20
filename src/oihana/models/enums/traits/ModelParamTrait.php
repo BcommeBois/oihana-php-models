@@ -3,7 +3,18 @@
 namespace oihana\models\enums\traits;
 
 /**
- * The enumeration of all the common model's parameters.
+ * The set of constant keys recognized in a model's `$init` options array.
+ *
+ * This trait holds every common parameter name shared by the model operations
+ * and factories — covering identity (`id`, `key`, `keys`), payloads (`document`
+ * via `model`), querying (`conditions`, `query`, `binds`, `sort`), caching
+ * (`cache`, `ttl`), alteration (`alters`, `alterKey`) and behavioural toggles
+ * (`debug`, `mock`, `throwable`, …).
+ *
+ * It is consumed by {@see \oihana\models\enums\ModelParam}, which combines it
+ * with {@see \oihana\reflect\traits\ConstantsTrait} to expose the reflection
+ * helpers. Reference these constants rather than raw strings to keep option
+ * arrays consistent across the library (no *magic strings*).
  *
  * @package oihana\models\enums\traits
  * @author  Marc Alcaraz

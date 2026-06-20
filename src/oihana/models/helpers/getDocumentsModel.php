@@ -30,14 +30,15 @@ use Psr\Container\NotFoundExceptionInterface;
  *
  * @return DocumentsModel|null The resolved model, the provided default, or `null` if none.
  *
- * @throws ContainerExceptionInterface If the container encounters an internal error.
- * @throws NotFoundExceptionInterface  If `$definition` is a string not found in the container.
+ * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+ * @throws NotFoundExceptionInterface  If no entry is found for the requested identifier in the container.
  *
  * @example
  * ```php
- * use oihana\models\helpers\getDocumentsModel;
  * use oihana\models\interfaces\DocumentsModel;
  * use Psr\Container\ContainerInterface;
+ *
+ * use function oihana\models\helpers\getDocumentsModel;
  *
  * // Case 1: Direct instance
  * $model = new MyDocumentsModel();

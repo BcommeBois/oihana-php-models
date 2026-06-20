@@ -11,8 +11,8 @@ use oihana\signals\Signal;
  * is truncated, allowing observers to react to the update event.
  *
  * Signals:
- * - `$beforeTruncate`: Emitted before the update occurs.
- * - `$afterTruncate`: Emitted after the update is complete.
+ * - `$beforeTruncate`: Emitted before the truncation occurs.
+ * - `$afterTruncate`: Emitted after the truncation is complete.
  *
  * @author Marc Alcaraz (ekameleon)
  * @since 1.0.0
@@ -23,7 +23,7 @@ trait HasTruncateSignals
     /**
      * Signal emitted after a collection has been truncated.
      *
-     * Observers connected to this signal receive the deleted document and optional context.
+     * Observers connected to this signal receive the emitting target and optional context.
      *
      * @var Signal|null
      */
@@ -32,7 +32,8 @@ trait HasTruncateSignals
     /**
      * Signal emitted before a collection is truncated.
      *
-     * Observers connected to this signal receive the document that is about to be deleted.
+     * Observers connected to this signal receive the emitting target, allowing them
+     * to react before every document is removed.
      *
      * @var Signal|null
      */

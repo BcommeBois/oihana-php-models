@@ -17,15 +17,9 @@ use MatthiasMullie\Scrapbook\Psr16\SimpleCache;
  * This helper function retrieves a {@see KeyValueStore} from the container,
  * and wraps its collection in a PSR-16 {@see SimpleCache} implementation.
  *
- * Example usage:
- * ```php
- * // Retrieve a cache collection named "users"
- * $userCache = cacheCollection( $container , "users" , 'cache:memory' );
- *
- * // Store and retrieve values
- * $userCache->set("id:42", ["name" => "Alice"]);
- * $data = $userCache->get("id:42");
- * ```
+ * It returns `null` when the definition is not registered in the container, or
+ * when the resolved entry is not a {@see KeyValueStore} — making it safe to use
+ * as an optional cache layer.
  *
  * @param Container $container  The DI container used to resolve the cache store definition.
  * @param string    $collection The collection name (namespace) to create inside the cache store.
@@ -33,8 +27,22 @@ use MatthiasMullie\Scrapbook\Psr16\SimpleCache;
  *
  * @return SimpleCache|null A PSR-16 cache instance scoped to the given collection, or `null` if the definition is not found or not compatible.
  *
- * @throws DependencyException If the container fails to resolve the cache definition.
- * @throws NotFoundException   If the cache definition is not registered in the container.
+ * @throws DependencyException If the dependency cannot be resolved by the container.
+ * @throws NotFoundException   If no entry is found for the given identifier in the container.
+ *
+ * @example
+ * ```php
+ * use function oihana\models\helpers\cacheCollection;
+ *
+ * // Retrieve a cache collection named "users" backed by the 'cache:memory' store.
+ * $userCache = cacheCollection( $container, 'users', 'cache:memory' ) ;
+ *
+ * if ( $userCache !== null )
+ * {
+ *     $userCache->set( 'id:42', [ 'name' => 'Alice' ] ) ;
+ *     $data = $userCache->get( 'id:42' ) ; // [ 'name' => 'Alice' ]
+ * }
+ * ```
  *
  * @see https://www.scrapbook.cash
  *

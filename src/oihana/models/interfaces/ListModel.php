@@ -21,10 +21,31 @@ interface ListModel
      * Retrieves all documents as an array. For large datasets, consider using
      * a streaming approach (e.g., {@see StreamModel}) to avoid high memory usage.
      *
-     * @param array $init Optional configuration array.
+     * @param array $init Operation options scoping the result set, typically
+     *                    `conditions` with their `binds`, a `sort` clause and
+     *                    pagination bounds (offset/limit). An empty array lists
+     *                    every document.
      *
-     * @return array
-     * An array of documents or items. The structure and type of each item depend on the model implementation.
+     * @return array An array of documents or items. The structure and type of
+     *               each item depend on the model implementation.
+     *
+     * @example
+     * ```php
+     * use oihana\models\interfaces\ListModel;
+     *
+     * class UserModel implements ListModel
+     * {
+     *     public function list( array $init = [] ) : array
+     *     {
+     *         return $this->store->query( $init[ 'conditions' ] ?? null, $init[ 'sort' ] ?? null ) ;
+     *     }
+     * }
+     *
+     * $model = new UserModel() ;
+     *
+     * $all    = $model->list() ;
+     * $active = $model->list( [ 'conditions' => 'doc.active == true', 'sort' => 'name' ] ) ;
+     * ```
      */
     public function list( array $init = [] ) :array ;
 }

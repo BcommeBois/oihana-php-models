@@ -28,6 +28,24 @@ use org\schema\constants\Schema;
  * - **Fetching the last document** matching specific conditions.
  * - **Truncating** the underlying storage (removing all documents).
  *
+ * Because it aggregates every single-purpose interface of this namespace, a
+ * `DocumentsModel` is the type to depend on whenever a service needs the full
+ * CRUD surface of a collection rather than one isolated capability.
+ *
+ * @example
+ * ```php
+ * use oihana\models\interfaces\DocumentsModel;
+ *
+ * function syncUser( DocumentsModel $users, array $payload ) : mixed
+ * {
+ *     $key = $payload[ 'key' ] ?? null ;
+ *
+ *     return $users->exist( [ 'key' => $key ] )
+ *          ? $users->update( [ 'key' => $key, 'document' => $payload ] )
+ *          : $users->insert( [ 'document' => $payload ] ) ;
+ * }
+ * ```
+ *
  * @package oihana\models\interfaces
  * @author  Marc Alcaraz
  * @since   1.0.0

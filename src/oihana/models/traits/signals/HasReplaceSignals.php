@@ -61,7 +61,7 @@ trait HasReplaceSignals
     /**
      * Release the replace-related signals.
      *
-     * Nullify and disconnect the `afterReplace` and `beforeInsert` signals.
+     * Nullify and disconnect the `afterReplace` and `beforeReplace` signals.
      *
      * @return static Returns `$this` for method chaining.
      */

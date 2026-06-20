@@ -28,8 +28,31 @@ use Psr\Container\NotFoundExceptionInterface;
  *
  * @return Model|null The resolved `Model` instance, the provided default, or `null` if none found.
  *
- * @throws ContainerExceptionInterface If an error occurs while retrieving the model from the container.
- * @throws NotFoundExceptionInterface  If a string definition is provided but not found in the container.
+ * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+ * @throws NotFoundExceptionInterface  If no entry is found for the requested identifier in the container.
+ *
+ * @example
+ * ```php
+ * use oihana\models\Model;
+ * use oihana\models\enums\ModelParam;
+ * use Psr\Container\ContainerInterface;
+ *
+ * use function oihana\models\helpers\getModel;
+ *
+ * // Case 1: a Model instance is returned as-is.
+ * $model = new MyModel() ;
+ * getModel( $model ) === $model ; // true
+ *
+ * // Case 2: an array carrying a ModelParam::MODEL entry.
+ * $resolved = getModel( [ ModelParam::MODEL => 'mainModel' ], $container ) ;
+ *
+ * // Case 3: a string identifier resolved from the container.
+ * $resolved = getModel( 'mainModel', $container ) ;
+ *
+ * // Case 4: nothing resolvable, the default is returned.
+ * $fallback = new MyModel() ;
+ * getModel( 'unknown', $container, $fallback ) === $fallback ; // true
+ * ```
  *
  * @package oihana\models\helpers
  * @author  Marc Alcaraz (ekameleon)
