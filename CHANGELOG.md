@@ -42,3 +42,13 @@ First release. The `oihana\models` namespace is extracted from
 - Bilingual user guide under `wiki/` (English + French): getting started
   (introduction, installation, dependencies), models, documents, PDO, alters,
   cache, signals & notices, enumerations, helpers and a testing guide.
+
+### Fixed
+- `NoticeType::AFTER_UPDATE` resolved to `'afterReplace'` (a copy-paste
+  duplicate of `AFTER_REPLACE`), making `AfterUpdate` notices indistinguishable
+  from `AfterReplace` by their type. Set it to `'afterUpdate'`. Added
+  `NoticeTypeTest` freezing every constant's literal value and their uniqueness.
+
+### Changed
+- Enriched the `NoticeType` class/constant PHPDoc and tidied docblocks,
+  `@package` tags and code formatting across the models source.
