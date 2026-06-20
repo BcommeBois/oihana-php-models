@@ -69,11 +69,13 @@ trait AlterNormalizePropertyTrait
      * - If empty or no flags provided, uses CleanFlag::DEFAULT | CleanFlag::RETURN_NULL
      * - If a flags value is provided at index 0, uses that instead
      *
-     * @param mixed $value The value to normalize
-     * @param array $definition Optional flags array: [CleanFlag value, ...other params]
-     * @param bool $modified Reference flag indicating if the value was modified
+     * @param mixed $value      The value to normalize (array, string, scalar or object).
+     * @param array $definition Optional flags array `[ CleanFlag bitmask , ...other params ]`.
+     *                          When omitted, `CleanFlag::DEFAULT | CleanFlag::RETURN_NULL` is used.
+     * @param bool  $modified   Reference flag set to `true` when the normalized value differs
+     *                          from the original.
      *
-     * @return mixed The normalized value, or null if cleaned away
+     * @return mixed The normalized value, or `null` when it was entirely cleaned away.
      *
      * @example
      * ```php

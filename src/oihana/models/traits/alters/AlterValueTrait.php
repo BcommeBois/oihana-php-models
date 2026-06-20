@@ -12,8 +12,8 @@ namespace oihana\models\traits\alters;
  * Example usage:
  * ```php
  * use oihana\models\enums\Alter;
- * use oihana\traits\AlterDocumentTrait;
- * use oihana\traits\alters\AlterValueTrait;
+ * use oihana\models\traits\AlterDocumentTrait;
+ * use oihana\models\traits\alters\AlterValueTrait;
  *
  * class Example
  * {
@@ -46,13 +46,39 @@ namespace oihana\models\traits\alters;
 trait AlterValueTrait
 {
     /**
-     * Replace a value with a new one if different, otherwise keep the original.
+     * Replaces a value with a fixed replacement when they differ, otherwise keeps the original.
      *
-     * @param mixed $value      The original value
-     * @param array $definition The definition reference to extract the new value to apply.
-     * @param bool  $modified   Will be set to true if the value was replaced
+     * The replacement is read from `$definition[0]`. When it is strictly equal (`!==`) to the
+     * current value, nothing changes and `$modified` is left untouched; otherwise the new value
+     * is returned and `$modified` is set to `true`.
      *
-     * @return mixed The altered value
+     * @param mixed $value      The original value.
+     * @param array $definition The alter definition; `$definition[0]` holds the replacement value
+     *                          (defaults to `null` when absent).
+     * @param bool  $modified   Reference flag set to `true` when the value was actually replaced.
+     *
+     * @return mixed The replacement value when it differs from the original, otherwise the original.
+     *
+     * @example
+     * ```php
+     * use oihana\models\traits\alters\AlterValueTrait;
+     *
+     * class Example
+     * {
+     *     use AlterValueTrait;
+     * }
+     *
+     * $example  = new Example();
+     * $modified = false;
+     *
+     * $status = $example->alterValue( 'draft' , [ 'published' ] , $modified );
+     * // $status   === 'published'
+     * // $modified === true
+     *
+     * // Same value: no change
+     * $same = $example->alterValue( 'published' , [ 'published' ] , $modified );
+     * // $same === 'published'
+     * ```
      */
     public function alterValue
     (

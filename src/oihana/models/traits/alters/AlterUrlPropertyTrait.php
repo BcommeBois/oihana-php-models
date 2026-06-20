@@ -42,7 +42,8 @@ use function oihana\files\path\joinPaths;
  * **Skip container resolution explicitly:**
  * ```php
  * $url = $this->alterUrlProperty($document, ['/api/products', 'id', false]);
- * // Re
+ * // Result: '/api/products/42'  (no base URL prepended)
+ * ```
  *
  * **With container-resolved base URL and trailing slash:**
  * ```php
@@ -50,9 +51,9 @@ use function oihana\files\path\joinPaths;
  * $url = $this->alterUrlProperty(
  *     $document,
  *     ['/api/products', 'id', 'baseUrl', true],
+ *     $container,
  *     $modified,
- *     'id',
- *     $container
+ *     'id'
  * );
  * // Result: 'https://example.com/api/products/42/'
  * ```
@@ -89,17 +90,22 @@ trait AlterUrlPropertyTrait
      * - `[2]` (string|bool)  — Container service key for base URL resolution or `false` to skip (default: 'baseUrl')
      * - `[3]` (bool)         — Add trailing slash to the result (default: false)
      *
-     * @param array|object  $document      The document to read property values from.
-     * @param array         $options       Configuration array: [path, propertyName, containerKey, trailingSlash]
-     * @param ?Container    $container     DI container for resolving base URL from service definitions.
-     * @param bool          $modified      Reference flag set to true if URL alteration occurs.
-     * @param ?string       $propertyName  Default property name to use if not specified in options.
-     * @param string        $containerKey  Default container key for base URL if not specified in options.
+     * @param array|object  $document      The document (array or object) to read property values from.
+     * @param array         $options       Configuration array `[ path , propertyName , containerKey ,
+     *                                     trailingSlash ]`; missing entries fall back to the method
+     *                                     arguments and defaults described above.
+     * @param ?Container    $container     DI container used to resolve the base URL from a service
+     *                                     definition; ignored when `null` or when the key is `false`.
+     * @param bool          $modified      Reference flag; always set to `true` since a URL is always built.
+     * @param ?string       $propertyName  Default property name to read when none is given in `$options[1]`
+     *                                     (otherwise falls back to {@see $alterKey} then {@see Schema::ID}).
+     * @param string        $containerKey  Default container service key for the base URL when none is
+     *                                     given in `$options[2]` (default `'baseUrl'`).
      *
      * @return string The generated URL.
      *
-     * @throws DependencyException  If container service resolution fails.
-     * @throws NotFoundException    If container service is not found.
+     * @throws DependencyException  If the dependency cannot be resolved by the container.
+     * @throws NotFoundException    If no entry is found for the given identifier in the container.
      *
      * ### Complete Example:
      * ```php
@@ -107,15 +113,16 @@ trait AlterUrlPropertyTrait
      * {
      *     use AlterUrlPropertyTrait ;
      *
-     *     public function mapPlace( $document, $container )
-     * {
+     *     public function mapPlace( $document , $container )
+     *     {
+     *         $modified = false;
      *         return $this->alterUrlProperty
-     * (
-     *             $document,
-     *             ['/places', 'id', 'baseUrl', true],
-     *             $modified,
-     *             'id',
-     *             $container,
+     *         (
+     *             $document ,
+     *             [ '/places' , 'id' , 'baseUrl' , true ] ,
+     *             $container ,
+     *             $modified ,
+     *             'id' ,
      *             'baseUrl'
      *         );
      *     }

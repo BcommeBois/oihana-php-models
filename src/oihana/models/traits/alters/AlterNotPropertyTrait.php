@@ -41,15 +41,16 @@ trait AlterNotPropertyTrait
     /**
      * Invert a boolean value or an array of booleans.
      *
-     * @param mixed $value    The value to alter. Can be a boolean, array of booleans, or any other value.
-     * @param bool  $modified Reference flag set to true if the value is altered.
+     * @param mixed $value    The value to invert: a boolean, an array of booleans, or any other
+     *                        value (which is coerced to boolean before inversion).
+     * @param bool  $modified Reference flag; always set to `true` since the inversion is unconditional.
      *
-     * @return bool|array Returns the inverted boolean or array of inverted booleans.
+     * @return bool|array The inverted boolean, or an array of inverted booleans when an array was given.
      *
      * @example
      * ```php
      * $processor = new class {
-     * use \oihana\traits\alters\AlterNotPropertyTrait;
+     *     use \oihana\models\traits\alters\AlterNotPropertyTrait;
      * };
      *
      * // Single boolean

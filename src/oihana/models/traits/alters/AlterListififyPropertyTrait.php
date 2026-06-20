@@ -26,10 +26,11 @@ use function oihana\core\strings\resolveList;
  *
  * @example
  * ```php
- * use oihana\models\traits\alters\AlterListifyPropertyTrait;
+ * use oihana\models\traits\alters\AlterListififyPropertyTrait;
  *
- * class Product {
- * use AlterListifyPropertyTrait;
+ * class Product
+ * {
+ *     use AlterListififyPropertyTrait;
  * }
  *
  * $product = new Product();
@@ -70,11 +71,16 @@ trait AlterListififyPropertyTrait
      * - `$definition[1]` (string): Output separator for joining (default: `PHP_EOL`)
      * - `$definition[2]` (string|null): Default value if result is empty (default: `null`)
      *
-     * @param mixed $value The value to transform (string, array, or null)
-     * @param array $definition Optional parameters: [separator, replace, default]
-     * @param bool $modified Reference flag indicating if the value was modified
+     * @param mixed $value      The value to transform: a separator-delimited string, an array
+     *                          of items, or `null`.
+     * @param array $definition Optional parameters `[ separator , replace , default ]`:
+     *                          the input separator (default `;`), the output separator used to
+     *                          join items (default `PHP_EOL`), and the fallback value returned
+     *                          when the result is empty (default `null`).
+     * @param bool  $modified   Reference flag set to `true` when the resulting value differs
+     *                          from the original.
      *
-     * @return string|null The normalized list string, or default if empty
+     * @return string|null The normalized list string, or the configured default when empty.
      *
      * @example
      * ```php

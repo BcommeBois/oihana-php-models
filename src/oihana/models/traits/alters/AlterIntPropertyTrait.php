@@ -18,7 +18,7 @@ namespace oihana\models\traits\alters;
  *
  * Example:
  * ```php
- * use oihana\traits\alters\AlterIntPropertyTrait;
+ * use oihana\models\traits\alters\AlterIntPropertyTrait;
  *
  * class Product {
  *     use AlterIntPropertyTrait;
@@ -68,7 +68,7 @@ trait AlterIntPropertyTrait
      *
      * Example:
      * ```php
-     * use oihana\traits\alters\AlterIntPropertyTrait;
+     * use oihana\models\traits\alters\AlterIntPropertyTrait;
      *
      * class Product {
      *     use AlterIntPropertyTrait;

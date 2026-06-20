@@ -7,50 +7,78 @@ use DI\Container;
 use InvalidArgumentException;
 use function oihana\core\callables\resolveCallable;
 
+/**
+ * Alters a property of a document through a context-aware "map" callback.
+ *
+ * This alteration is declared with the `Alter::MAP` type. Unlike the simpler
+ * {@see AlterCallablePropertyTrait} (which only sees the property value), the map callback
+ * receives the **whole document**, the optional DI container and the property key, so that
+ * the new value can be computed from sibling properties or from injected services. It is the
+ * tool of choice for derived/computed properties in a transformation pipeline:
+ *
+ * ```php
+ * Property::PRICE_INCL_VAT => [ Alter::MAP , $computeTotalCallback ] ,
+ * ```
+ *
+ * The first element of the parameters must be a callable (or a string resolvable to a
+ * callable via {@see resolveCallable()}), invoked with the signature:
+ *
+ * ```php
+ * function map( array|object $document , ?Container $container , string $key , mixed $value , array $params = [] ): mixed
+ * ```
+ *
+ * The callable returns the new property value; when it is applied, the `$modified` flag is
+ * set to `true`. When no callable is provided the original value is returned unchanged.
+ *
+ * @package oihana\models\traits\alters
+ * @author  Marc Alcaraz (ekameleon)
+ * @since   1.0.0
+ */
 trait AlterMapPropertyTrait
 {
     /**
-     * Provides a mechanism to alter a property of a document using a custom "map" callback.
+     * Alters a property of a document through a context-aware "map" callback.
      *
-     * This allows applying arbitrary transformations to a specific property of an array or object,
-     * with access to the full document and optionally a DI container.
+     * The first element of `$params` is treated as the callback (a callable or a string
+     * resolvable via {@see resolveCallable()}); the remaining elements are forwarded to it as
+     * its `$params` argument. The callback receives the full document, the container, the key
+     * and the current value, and returns the new value. If `$params` is empty or the callback
+     * cannot be resolved to a callable, the original value is returned untouched.
      *
-     * The first element of `$params` must be a callable (or string resolvable to a callable via `resolveCallable`),
-     * which will be invoked with the following signature:
+     * @param array|object   $document  The document (array or object) holding the property; passed
+     *                                  by reference so the callback may read or adjust siblings.
+     * @param Container|null $container Optional DI container, forwarded to the callback for
+     *                                  resolving services when the computed value needs them.
+     * @param string         $key       The key or property name being altered.
+     * @param mixed          $value     The current value of the property.
+     * @param array          $params    Parameters whose first element is the callback (callable or
+     *                                  resolvable string); any remaining elements are forwarded to it.
+     * @param bool          &$modified  Output flag set to `true` when the callback is applied.
      *
-     * ```php
-     * function map(array|object $document, ?Container $container, string $key, mixed $value, array $params = []): mixed
-     * ```
+     * @return mixed The value returned by the callback, or the original value when no callback applies.
      *
-     * The callable should return the new value for the property. Any modification will set `$modified` to true.
-     *
-     * @param array|object $document The document (array or object) containing the property.
-     * @param Container|null $container Optional DI container, for resolving services if needed.
-     * @param string $key The key or property name being altered.
-     * @param mixed $value The current value of the property.
-     * @param array $params Additional parameters, where the first element must be the callable.
-     * @param bool &$modified Output flag indicating whether the value was modified by the callable.
-     *
-     * @return mixed The altered value for the property.
-     *
-     * @throws InvalidArgumentException If the callable cannot be resolved.
+     * @throws InvalidArgumentException If the callback is given as a string that cannot be resolved.
      *
      * @example
      * ```php
-     * $document = ['price' => 10 , 'vat' => '0.2' ];
-     * $callback = fn( array &$document , $container , $key, $value, $params) => $value + ( $value * ( $document['vat'] ?? 0 ) ) ;
+     * $document = [ 'price' => 10 , 'vat' => '0.2' ];
+     * $modified = false;
+     *
+     * // The callback reads a sibling property ('vat') to compute the new value
+     * $callback = fn( array|object $document , $container , string $key , mixed $value , array $params )
+     *     => $value + ( $value * ( $document['vat'] ?? 0 ) ) ;
      *
      * $newValue = $this->alterMapProperty
      * (
      *      $document ,
      *      null ,
-     *      'price',
-     *      $document['price'],
-     *      $callback ,
+     *      'price' ,
+     *      $document['price'] ,
+     *      [ $callback ] ,   // the callback is the first element of $params
      *      $modified
      * );
-     * // $newValue = 12
-     * // $modified = true
+     * // $newValue === 12
+     * // $modified === true
      * ```
      */
     public function alterMapProperty

@@ -11,6 +11,31 @@ use org\schema\Thing;
 
 use function oihana\core\normalize;
 
+/**
+ * Hydrates an array value into a typed object instance during property alteration.
+ *
+ * This alteration is declared with the `Alter::HYDRATE` type. It is used in property
+ * transformation pipelines to turn a raw associative array (for instance the decoded
+ * payload of a nested document) into a real object of a given class, so that downstream
+ * code works with strongly-typed instances instead of loose arrays:
+ *
+ * ```php
+ * Property::GEO => [ Alter::HYDRATE , GeoCoordinates::class ] ,
+ * ```
+ *
+ * Two hydration strategies are used depending on the target class: classes extending
+ * {@see Thing} are built directly through their constructor, while any other class is
+ * populated through {@see ReflectionTrait::hydrate()} (reflection-based property mapping).
+ * The input is normalized beforehand (configurable through {@see CleanFlag}), and an empty
+ * normalized value yields `null`.
+ *
+ * The `$modified` flag is set to `true` whenever the resulting value differs from the
+ * original input.
+ *
+ * @package oihana\models\traits\alters
+ * @author  Marc Alcaraz (ekameleon)
+ * @since   1.0.0
+ */
 trait AlterHydratePropertyTrait
 {
     use ReflectionTrait ;
@@ -63,7 +88,34 @@ trait AlterHydratePropertyTrait
      *     The hydrated value, possibly an instance of `$schema`, or `null` if empty.
      *
      * @throws ReflectionException
-     *     If an error occurs during reflection-based hydration.
+     *     If a class or property cannot be reflected (e.g. during hydration).
+     *
+     * @example
+     * ```php
+     * use oihana\models\traits\alters\AlterHydratePropertyTrait;
+     * use org\schema\GeoCoordinates;
+     *
+     * class Place
+     * {
+     *     use AlterHydratePropertyTrait;
+     * }
+     *
+     * $place    = new Place();
+     * $modified = false;
+     *
+     * $geo = $place->alterHydrateProperty
+     * (
+     *     [ 'latitude' => 48.85 , 'longitude' => 2.35 ] ,
+     *     [ GeoCoordinates::class ] ,
+     *     $modified
+     * );
+     * // $geo instanceof GeoCoordinates === true
+     * // $modified === true
+     *
+     * // A scalar is returned untouched
+     * $raw = $place->alterHydrateProperty( 'not-an-array' , [ GeoCoordinates::class ] , $modified );
+     * // $raw === 'not-an-array'
+     * ```
      */
     public function alterHydrateProperty
     (

@@ -44,16 +44,48 @@ use function oihana\models\helpers\getDocumentsModel;
 trait AlterGetDocumentPropertyTrait
 {
     /**
-     * Gets a document with a Documents model.
-     * @param mixed         $value
-     * @param array         $definition
-     * @param ?Container    $container     DI container for resolving base URL from service definitions.
-     * @param bool          $modified
-     * @return mixed
-     * @throws ContainerExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface
+     * Replaces an identifier value by the document it references, loaded through a Documents model.
+     *
+     * The model class name is taken from `$definition[0]` and resolved via
+     * {@see getDocumentsModel()} (optionally using the DI container). The model's `get()`
+     * method is then called with the lookup key `$definition[1]` and the current `$value`.
+     * A `null` value short-circuits and is returned untouched, and any failure raised while
+     * fetching the document is swallowed and turned into a `null` result.
+     *
+     * @param mixed      $value      The identifier to resolve. A `null` value is returned as-is.
+     * @param array      $definition The lookup definition: `[ 0 => model class/identifier ,
+     *                               1 => lookup key field ]`. Both default to `null`.
+     * @param ?Container $container  Optional DI container used by {@see getDocumentsModel()} to
+     *                               resolve the model instance from a service definition.
+     * @param bool       $modified   Reference flag set to `true` once a document has been fetched.
+     *
+     * @return mixed The loaded document, `null` when the lookup failed, or the original `$value`
+     *               when it was `null` or no model could be resolved.
+     *
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException         If the dependency cannot be resolved by the container.
+     * @throws NotFoundException           If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface  If no entry is found for the requested identifier in the container.
+     *
+     * @example
+     * ```php
+     * class MyMapper
+     * {
+     *     use AlterGetDocumentPropertyTrait;
+     * }
+     *
+     * $mapper   = new MyMapper();
+     * $modified = false;
+     *
+     * // Replace a user id by the full user document loaded from the 'UserModel' service
+     * $user = $mapper->alterGetDocument( 42 , [ 'UserModel' , 'id' ] , $container , $modified );
+     * // $user === <document whose id === 42> (or null if not found)
+     * // $modified === true
+     *
+     * // A null identifier is returned untouched
+     * $none = $mapper->alterGetDocument( null , [ 'UserModel' , 'id' ] , $container , $modified );
+     * // $none === null
+     * ```
      */
     public function alterGetDocument
     (
