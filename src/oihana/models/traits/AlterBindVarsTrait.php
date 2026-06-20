@@ -66,18 +66,13 @@ use function oihana\core\arrays\isAssociative;
  * - Alter::URL             → Generate a URL from a property.
  * - Alter::VALUE           → Override with a fixed value.
  *
- * @param mixed $document The array or object to transform.
- *                        If it's a list of objects/arrays, the alteration is recursively applied to each.
+ * Mix this trait into a model (typically a PDO-backed one) when you want the bind variables
+ * passed to a prepared statement to be normalized/cast before execution — for example casting
+ * incoming string identifiers to `int`, prices to `float`, or hydrating nested documents.
+ * The alteration rules are declared once in {@see $bindAlters} and may be scoped per context.
  *
- * @return mixed The altered version of the document (same type as input).
- *
- * @throws ContainerExceptionInterface
- * @throws NotFoundExceptionInterface
- * @throws DependencyException
- * @throws NotFoundException
- *
- * @author Marc Alcaraz (eKameleon)
  * @package oihana\models\traits
+ * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait AlterBindVarsTrait
@@ -86,7 +81,13 @@ trait AlterBindVarsTrait
         ContainerTrait ;
 
     /**
-     * The enumeration of all definitions to alter on the array or object key/value properties.
+     * The alteration definitions applied to bind variables.
+     *
+     * Keys are either property names mapping to an {@see Alter} definition, or context names
+     * mapping to a nested array of per-property definitions (selected through the `$context`
+     * argument of {@see alterBindVars()}).
+     *
+     * @var array
      */
     public array $bindAlters = [] ;
 
@@ -109,11 +110,11 @@ trait AlterBindVarsTrait
      *
      * @return array|null The transformed bind variables array, preserving the input structure. Returns the original input if no alterations apply.
      *
-     * @throws ContainerExceptionInterface If a DI container error occurs during alteration.
-     * @throws DependencyException If a dependency cannot be resolved during alteration.
-     * @throws NotFoundException If a container service is not found during alteration.
-     * @throws NotFoundExceptionInterface If a container service is not found during alteration.
-     * @throws ReflectionException If a reflection operation fails during alteration (e.g., Hydrate or Get).
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
      *
      * @example
      * ```php
@@ -186,9 +187,14 @@ trait AlterBindVarsTrait
     }
 
     /**
-     * Initialize the 'bindAlters' property.
-     * @param array $init
-     * @return static
+     * Initializes the `$bindAlters` property from an initialization array.
+     *
+     * The value is read from the {@see ModelParam::BINDS_ALTERS} key when present;
+     * otherwise the current value of `$bindAlters` is kept.
+     *
+     * @param array $init Initialization options, typically the model constructor payload.
+     *
+     * @return static The current instance, for fluent chaining.
      */
     public function initializeBindVarsAlters( array $init = [] ):static
     {

@@ -3,32 +3,39 @@
 namespace oihana\models\traits;
 
 /**
- * Trait to provide a throwable behavior to models.
+ * Provides a configurable "throwable" behavior to models.
  *
- * This trait allows a class to specify whether its methods should throw exceptions or handle errors silently.
+ * Mix this trait in when a model should let callers choose between fail-fast and silent error
+ * handling. Methods of the host class read the public `$throwable` flag to decide whether to raise
+ * an exception or degrade gracefully (e.g. return `null`/`false`). The flag can be set directly or
+ * hydrated from an initialization array via {@see initializeThrowable()}.
  *
- * @author Marc Alcaraz (eKameleon)
  * @package oihana\models\traits
+ * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait ThrowableTrait
 {
     /**
-     * Key used in initialization arrays to set throwable behavior.
+     * The `throwable` key used in initialization arrays.
      */
     public const string THROWABLE = 'throwable' ;
 
     /**
-     * Determines if methods should throw exceptions.
+     * Whether the host methods should throw exceptions instead of failing silently.
+     *
      * @var bool
      */
     public bool $throwable = false ;
 
     /**
-     * Initializes the throwable property from an array of options.
+     * Initializes the `$throwable` flag from an initialization array.
      *
-     * @param array<string,mixed> $init Initialization options
-     * @return static
+     * Read from the {@see self::THROWABLE} key when present; otherwise the current value is kept.
+     *
+     * @param array<string,mixed> $init Initialization options (key: `throwable`).
+     *
+     * @return static The current instance, for fluent chaining.
      */
     public function initializeThrowable( array $init = [] ):static
     {

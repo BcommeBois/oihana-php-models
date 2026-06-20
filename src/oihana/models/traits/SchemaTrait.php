@@ -8,23 +8,33 @@ use oihana\models\enums\ModelParam;
 use org\schema\helpers\SchemaResolver;
 
 /**
- * Provides methods for initialize a 'schema' property.
+ * Provides a flexible `schema` reference used to hydrate resources.
  *
- * @author Marc Alcaraz (eKameleon)
+ * The schema can be a fixed class/type string, a {@see Closure}, or a {@see SchemaResolver}. When
+ * it is callable (closure or resolver) it can decide the schema dynamically from a target value,
+ * which lets a single model resolve the right Schema.org type per document. Mix this trait in when
+ * a model needs to expose such a configurable schema and resolve it on demand.
+ *
  * @package oihana\models\traits
+ * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait SchemaTrait
 {
     /**
-     * The internal schema to use to hydrate the resources.
+     * The schema used to hydrate the resources.
+     *
+     * A fixed type string, a {@see Closure} taking the target and returning a string, or a
+     * {@see SchemaResolver}. `null` means no schema is configured.
+     *
      * @var null|string|Closure|SchemaResolver
      */
     public null|string|Closure|SchemaResolver $schema = null ;
 
     /**
-     * Check if schema is defined (either as string or callable).
-     * @return bool
+     * Indicates whether a schema is configured.
+     *
+     * @return bool `true` if `$schema` is not `null` (string, closure or resolver), `false` otherwise.
      */
     public function hasSchema(): bool
     {
@@ -32,11 +42,21 @@ trait SchemaTrait
     }
 
     /**
-     * Get the resolved schema value.
+     * Resolves the schema to its final string value.
      *
-     * @param mixed $target Optional target to pass if the schema is invokable (like SchemaResolver)
+     * If `$schema` is a {@see SchemaResolver} or any callable, it is invoked with `$target` and its
+     * return value is used. If it is a plain string it is returned as-is. Returns `null` when no
+     * schema is configured.
      *
-     * @return string|null
+     * @param mixed $target Optional target passed to the resolver/closure to compute the schema dynamically.
+     *
+     * @return string|null The resolved schema string, or `null` when none is configured.
+     *
+     * @example
+     * ```php
+     * $model->schema = fn( $doc ) => $doc['type'] === 'book' ? 'Book' : 'Thing';
+     * echo $model->getSchema( [ 'type' => 'book' ] ); // "Book"
+     * ```
      */
     public function getSchema( mixed $target = null ): ?string
     {
@@ -56,9 +76,16 @@ trait SchemaTrait
     }
 
     /**
-     * Initialize the 'schema' property.
-     * @param array $init
-     * @return static
+     * Initializes the `$schema` property from an initialization array.
+     *
+     * The value is read from the {@see ModelParam::SCHEMA} key. It must be `null`, a string, a
+     * {@see Closure} or a {@see SchemaResolver}; any other type is rejected.
+     *
+     * @param array $init Initialization options (key: `ModelParam::SCHEMA`).
+     *
+     * @return static The current instance, for fluent chaining.
+     *
+     * @throws InvalidArgumentException If the value is neither a string, a Closure, nor a SchemaResolver.
      */
     public function initializeSchema( array $init = [] ):static
     {

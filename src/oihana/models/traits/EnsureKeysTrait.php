@@ -50,21 +50,42 @@ use function oihana\core\arrays\isIndexed;
 trait EnsureKeysTrait
 {
     /**
-     * The default array definition to ensure attributes in the documents of the model.
+     * The default configuration used to ensure attributes on the model's documents.
+     *
+     * Either a flat list of keys, or an associative array with the {@see ModelParam::KEYS},
+     * {@see ModelParam::DEFAULT} and {@see ModelParam::ENFORCE} entries. `null` means "no default".
+     *
      * @var ?array
      */
     public ?array $ensure = null ;
 
     /**
-     * Ensures that specific attributes (keys or properties) exist on a document or a collection of documents.
+     * Ensures that specific attributes (keys or properties) exist on a document or a collection.
      *
-     * It parses the configuration from $init[ModelParam::ENSURE] and applies it to $data.
-     * It automatically detects if $data is a collection (indexed array) or a single item.
+     * The configuration is resolved from `$init[ModelParam::ENSURE]`, falling back to the instance
+     * `$ensure` property. It can be a flat list of keys or a structured array exposing
+     * {@see ModelParam::KEYS}, {@see ModelParam::DEFAULT} and {@see ModelParam::ENFORCE}. The method
+     * auto-detects whether `$data` is an indexed collection (each element is processed) or a single
+     * document, and mutates it in place. It is a no-op when `$data` is empty or no configuration applies.
      *
-     * @param mixed &$data Reference to the document(s). Modified in place.
-     * @param array $init  The initialization options containing ModelParam::ENSURE.
+     * @param mixed &$data Reference to the document or list of documents. Modified in place.
+     * @param array  $init Runtime options; a `ModelParam::ENSURE` entry overrides the `$ensure` property.
      *
      * @return void
+     *
+     * @example
+     * ```php
+     * $data = [ 'id' => 1 ];
+     * $this->ensureDocumentKeys( $data ,
+     * [
+     *     ModelParam::ENSURE =>
+     *     [
+     *         ModelParam::KEYS    => [ 'status' ] ,
+     *         ModelParam::DEFAULT => 'draft' ,
+     *     ]
+     * ]);
+     * // $data === [ 'id' => 1 , 'status' => 'draft' ]
+     * ```
      */
     protected function ensureDocumentKeys( mixed &$data , array $init = [] ): void
     {

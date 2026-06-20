@@ -49,7 +49,7 @@ trait PropertyTrait
     /**
      * Asserts the existence of the 'property' key.
      *
-     * @return static
+     * @return static Returns `$this` to allow method chaining.
      *
      * @throws UnexpectedValueException If the "property" key is not set.
      */

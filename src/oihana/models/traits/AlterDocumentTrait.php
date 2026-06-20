@@ -63,8 +63,13 @@ use function oihana\core\arrays\isAssociative;
  * - Alter::URL             → Generate a URL from a property.
  * - Alter::VALUE           → Override with a fixed value.
  *
- * @author Marc Alcaraz (eKameleon)
+ * Mix this trait into a model or a transformer when you need to normalize whole documents
+ * (single associative array/object or a list of them) right after they are read from a data
+ * source and before they are exposed to the rest of the application. The rules live in the
+ * public {@see $alters} property and can be overridden per call.
+ *
  * @package oihana\models\traits
+ * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait AlterDocumentTrait
@@ -73,7 +78,12 @@ trait AlterDocumentTrait
         ContainerTrait ;
 
     /**
-     * The enumeration of all definitions to alter on the array or object key/value properties.
+     * The alteration definitions applied to document properties.
+     *
+     * Each key is a property name and each value is either a single {@see Alter} constant
+     * or an array describing a parameterized/chained alteration.
+     *
+     * @var array
      */
     public array $alters = [] ;
 
@@ -96,11 +106,11 @@ trait AlterDocumentTrait
      *
      * @return mixed The transformed document, preserving the input structure (array, object, or list of arrays/objects).
      *
-     * @throws ContainerExceptionInterface If a DI container error occurs during alteration.
-     * @throws DependencyException If a dependency cannot be resolved during alteration.
-     * @throws NotFoundException If a container service is not found during alteration.
-     * @throws NotFoundExceptionInterface If a container service is not found during alteration.
-     * @throws ReflectionException If a reflection operation fails during alteration (e.g., Hydrate or Get).
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
      *
      * @example
      * ```php
@@ -166,9 +176,15 @@ trait AlterDocumentTrait
     }
 
     /**
-     * Initialize the 'alters' property.
-     * @param array $init
-     * @return static
+     * Initializes the `$alters` property from an initialization array.
+     *
+     * The definitions are read from the {@see ModelParam::ALTERS} key when present; otherwise
+     * the current value is kept. The alter key configuration is then initialized through
+     * {@see initializeAlterKey()}.
+     *
+     * @param array $init Initialization options, typically the model constructor payload.
+     *
+     * @return static The current instance, for fluent chaining.
      */
     public function initializeAlters( array $init = [] ):static
     {

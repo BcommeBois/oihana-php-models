@@ -77,8 +77,13 @@ use function oihana\core\arrays\toArray;
  * - Alter::URL             → Generate a URL from a property.
  * - Alter::VALUE           → Override with a fixed value.
  *
- * @author Marc Alcaraz (eKameleon)
+ * This is the low-level engine shared by {@see AlterDocumentTrait} and {@see AlterBindVarsTrait}.
+ * It aggregates every per-type `Alter*PropertyTrait` and exposes {@see alterProperty()} as the
+ * single entry point that dispatches a property to the right alteration (single or chained).
+ * You rarely mix this trait directly — use one of the higher-level traits instead.
+ *
  * @package oihana\models\traits
+ * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait AlterTrait
@@ -135,11 +140,11 @@ trait AlterTrait
      *
      * @return array|object The altered document (same reference type as input)
      *
-     * @throws ContainerExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface
-     * @throws ReflectionException
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
      *
      * @example
      * ```php
@@ -199,11 +204,11 @@ trait AlterTrait
      *
      * @return array|object $document The document with the altered property
      *
-     * @throws ContainerExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface
-     * @throws ReflectionException
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
      */
     protected function applyChainedAlterations
     (
@@ -263,11 +268,11 @@ trait AlterTrait
      *
      * @return array|object The document with the altered property
      *
-     * @throws ContainerExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface
-     * @throws ReflectionException
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
      */
     protected function applySingleAlteration
     (
@@ -310,11 +315,11 @@ trait AlterTrait
      *
      * @return mixed The altered value
      *
-     * @throws ContainerExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface
-     * @throws ReflectionException
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
      */
     protected function executeAlteration
     (
