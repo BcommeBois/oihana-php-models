@@ -10,8 +10,8 @@ use org\schema\helpers\SchemaResolver;
 /**
  * Provides methods for initialize a 'schema' property.
  *
- * @package oihana\traits
- * @author  Marc Alcaraz (ekameleon)
+ * @author Marc Alcaraz (eKameleon)
+ * @package oihana\models\traits
  * @since   1.0.0
  */
 trait SchemaTrait

@@ -21,12 +21,12 @@ use oihana\signals\notices\Payload;
  *
  * @author Marc Alcaraz (ekameleon)
  * @since 1.0.0
- * @package oihana\notices
+ * @package oihana\models\notices
  */
 class AfterUpsert extends Payload
 {
     /**
-     * Creates a new AfterUpdate instance
+     * Creates a new AfterUpsert instance
      *
      * @param mixed|null  $data    The document(s) or value upserted.
      * @param object|null $target  The target of the notice.

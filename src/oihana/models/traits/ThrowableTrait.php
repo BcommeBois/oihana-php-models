@@ -8,7 +8,8 @@ namespace oihana\models\traits;
  * This trait allows a class to specify whether its methods should throw exceptions or handle errors silently.
  *
  * @author Marc Alcaraz (eKameleon)
- * @package oihana\traits
+ * @package oihana\models\traits
+ * @since   1.0.0
  */
 trait ThrowableTrait
 {

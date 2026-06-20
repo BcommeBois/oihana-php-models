@@ -37,7 +37,7 @@ use function oihana\models\helpers\getDocumentsModel;
  * }
  * ```
  *
- * @package oihana\traits\alters
+ * @package oihana\models\traits\alters
  * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */

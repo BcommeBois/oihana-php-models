@@ -35,7 +35,7 @@ use Psr\Container\NotFoundExceptionInterface;
  * - oihana\logging\DebugTrait
  * - ToStringTrait
  *
- * @package oihana\traits
+ * @package oihana\models\pdo
  * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */

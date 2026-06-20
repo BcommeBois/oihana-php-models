@@ -4,6 +4,10 @@ namespace oihana\models\enums\traits;
 
 /**
  * The enumeration of all the common model's parameters.
+ *
+ * @package oihana\models\enums\traits
+ * @author  Marc Alcaraz
+ * @since   1.0.0
  */
 trait ModelParamTrait
 {

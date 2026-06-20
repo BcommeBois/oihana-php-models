@@ -23,7 +23,8 @@ use Psr\SimpleCache\InvalidArgumentException;
  * - 'ttl' (int|DateInterval|null): The default expiration time.
  *
  * @author Marc Alcaraz (eKameleon)
- * @package oihana\traits
+ * @package oihana\models\traits
+ * @since   1.0.0
  */
 trait CacheableTrait
 {

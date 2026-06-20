@@ -2,7 +2,6 @@
 
 namespace oihana\models\traits ;
 
-use oihana\models\enums\ModelParam;
 use UnexpectedValueException;
 
 use Psr\Container\ContainerExceptionInterface;
@@ -10,13 +9,14 @@ use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 use oihana\enums\Char;
-
+use oihana\models\enums\ModelParam;
 use oihana\models\interfaces\ListModel;
 
 /**
  * Defines a ListModel properties in your class.
+ *
+ * @author Marc Alcaraz (eKameleon)
  * @package oihana\models\traits
- * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait ListModelTrait

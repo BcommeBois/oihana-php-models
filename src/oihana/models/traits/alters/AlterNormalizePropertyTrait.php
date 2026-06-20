@@ -24,10 +24,6 @@ use function oihana\core\normalize ;
  *
  * The `$modified` flag is set to `true` if the resulting value differs from the original.
  *
- * @package oihana\models\traits\alters
- * @author  Marc Alcaraz (ekameleon)
- * @since   1.0.0
- *
  * @see normalize  For the underlying normalization logic.
  * @see CleanFlag  For the enumeration of cleaning modes.
  *
@@ -36,7 +32,8 @@ use function oihana\core\normalize ;
  * use oihana\models\traits\alters\AlterNormalizePropertyTrait;
  * use oihana\core\arrays\CleanFlag;
  *
- * class Product {
+ * class Product
+ * {
  *     use AlterNormalizePropertyTrait;
  * }
  *

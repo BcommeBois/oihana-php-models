@@ -21,7 +21,7 @@ use oihana\signals\notices\Payload;
  *
  * @author Marc Alcaraz (ekameleon)
  * @since 1.0.0
- * @package oihana\notices
+ * @package oihana\models\notices
  */
 class AfterInsert extends Payload
 {

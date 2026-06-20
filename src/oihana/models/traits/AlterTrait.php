@@ -77,8 +77,8 @@ use function oihana\core\arrays\toArray;
  * - Alter::URL             → Generate a URL from a property.
  * - Alter::VALUE           → Override with a fixed value.
  *
- * @package oihana\traits
- * @author  Marc Alcaraz (ekameleon)
+ * @author Marc Alcaraz (eKameleon)
+ * @package oihana\models\traits
  * @since   1.0.0
  */
 trait AlterTrait

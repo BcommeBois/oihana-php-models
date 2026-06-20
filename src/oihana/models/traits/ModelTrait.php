@@ -14,8 +14,9 @@ use UnexpectedValueException;
 
 /**
  * Defines a Document model properties in your class.
+ *
+ * @author Marc Alcaraz (eKameleon)
  * @package oihana\models\traits
- * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
  */
 trait ModelTrait

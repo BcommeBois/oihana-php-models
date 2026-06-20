@@ -18,42 +18,6 @@ use DI\Container;
  * The model can be initialized with configuration options such as alters, binds, schema, defer assignment,
  * logger, mock objects, and the PDO instance itself.
  *
- * @throws ContainerExceptionInterface If there is a problem retrieving services from the container.
- * @throws NotFoundExceptionInterface If a required service is not found in the container.
- *
- * @package oihana\models
- *
- * @property Container $container The dependency injection container instance.
- *
- * @method mixed fetch(string $query, array $bindVars = []) Fetch a single record from the database.
- * @method array fetchAll(string $query, array $bindVars = []) Fetch all matching records from the database.
- * @method mixed fetchColumn(string $query, array $bindVars = [], int $column = 0) Fetch a single column from the first row.
- *
- * @example
- * ```php
- * use DI\Container;
- * use oihana\models\PDOModel;
- *
- * $container = new Container();
- *
- * // Configuration array with optional parameters
- * $config =
- * [
- *     'deferAssignment' => true,
- *     'pdo'             => 'my_pdo_service', // or a PDO instance
- *     'schema'          => MyEntity::class,
- * ];
- *
- * // Instantiate the model with the container and configuration
- * $model = new PDOModel( $container , $config ) ;
- *
- * // Fetch a single record
- * $record = $model->fetch('SELECT * FROM users WHERE id = :id', ['id' => 123]);
- *
- * // Fetch all records
- * $records = $model->fetchAll('SELECT * FROM users');
- * ```
- *
  * @package oihana\models
  * @author  Marc Alcaraz (ekameleon)
  * @since   1.0.0
