@@ -26,14 +26,29 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * Provides methods for binding values, executing queries, and retrieving results using PDO.
- * Supports schema-based result mapping and integration with dependency injection.
+ * Adds a complete PDO data-access layer to any model: prepared-statement execution, named-parameter
+ * binding, schema-aware result mapping and several `fetch*` strategies (single row, full array,
+ * streaming generator, single column, column list).
  *
- * Requires the following traits:
- * - AlterDocumentTrait
- * - BindsTrait
- * - oihana\logging\DebugTrait
- * - ToStringTrait
+ * Key behaviours:
+ * - **Safe binding**: {@see PDOTrait::bindValues()} maps an associative array onto `:name`
+ *   placeholders, with optional per-value PDO type hints (`['id' => [5, PDO::PARAM_INT]]`).
+ * - **Schema mapping**: when a `$schema` class is set, statements use `PDO::FETCH_CLASS`
+ *   (optionally combined with `PDO::FETCH_PROPS_LATE` when `$deferAssignment` is `true`); otherwise
+ *   rows fall back to `PDO::FETCH_ASSOC` and are returned as `stdClass`/arrays.
+ * - **Post-fetch alteration**: every fetched row passes through {@see AlterDocumentTrait::alter()},
+ *   so registered property alterations are applied transparently.
+ * - **Resilient by default**: each `fetch*` method swallows exceptions and logs a warning, returning
+ *   a neutral value (`null` / `[]`). Pass `$throwable = true` to rethrow instead, e.g. inside
+ *   transactions where failures must propagate.
+ * - **DI integration**: the {@see PDO} instance is resolved through {@see PDOTrait::initializePDO()},
+ *   either directly or from a PSR-11 container by service id.
+ *
+ * Requires the following traits to be mixed into the host class:
+ * - {@see AlterDocumentTrait}
+ * - {@see BindsTrait}
+ * - {@see \oihana\logging\DebugTrait}
+ * - {@see \oihana\traits\ToStringTrait}
  *
  * @package oihana\models\pdo
  * @author  Marc Alcaraz (ekameleon)
@@ -48,26 +63,43 @@ trait PDOTrait
         ThrowableTrait ;
 
     /**
-     * Indicates if the the constructor is called before setting properties.
-     * Only if the schema property is defined.
+     * Whether schema hydration should run the constructor *before* assigning fetched columns.
+     *
+     * Only meaningful when a `$schema` class is defined: when `true`, the fetch mode is combined with
+     * {@see PDO::FETCH_PROPS_LATE} so the object's constructor runs first and the row values then
+     * overwrite the defaults it set.
+     *
      * @var bool|null
      */
     public ?bool $deferAssignment = false ;
 
     /**
-     * The PDO reference.
+     * The PDO connection used to prepare and execute statements, or `null` when none is configured.
      * @var ?PDO
      */
     public ?PDO $pdo = null ;
 
     /**
-     * Bind named parameters to a prepared PDO statement.
+     * Binds named parameters onto an already-prepared PDO statement.
      *
-     * @param PDOStatement $statement  The PDO statement.
-     * @param array        $bindVars   Associative array of bindings. Supports:
-     *                                 - ['id' => 5]
-     *                                 - ['id' => [5, PDO::PARAM_INT]]
+     * Each key of `$bindVars` is bound to the matching `:key` placeholder (the leading colon is
+     * prepended automatically). A scalar value is bound with PDO's default type inference; an array
+     * value is treated as a `[value, type]` pair, letting you force a PDO type such as
+     * `PDO::PARAM_INT` or `PDO::PARAM_BOOL`. An empty `$bindVars` is a no-op.
+     *
+     * @param PDOStatement $statement The prepared statement to bind the values onto.
+     * @param array        $bindVars  Associative array of bindings, keyed by placeholder name. Supports:
+     *                                 - `['id' => 5]` — bound with default type inference.
+     *                                 - `['id' => [5, PDO::PARAM_INT]]` — bound with an explicit PDO type.
+     *
      * @return void
+     *
+     * @example
+     * ```php
+     * $statement = $pdo->prepare( 'SELECT * FROM users WHERE id = :id AND active = :active' );
+     * $this->bindValues( $statement , [ 'id' => [ 42 , PDO::PARAM_INT ] , 'active' => true ] );
+     * $statement->execute();
+     * ```
      */
     public function bindValues( PDOStatement $statement , array $bindVars = [] ):void
     {
@@ -89,25 +121,40 @@ trait PDOTrait
     }
 
     /**
-     * Execute a SELECT query and fetch a single result.
-     * The result is returned as an object or as a mapped schema class if defined.
-     * Alteration is applied via AlterDocumentTrait.
+     * Executes a SELECT query and returns its first row.
      *
-     * @param string $query The SQL SELECT query to execute.
-     * @param array $bindVars Optional named parameter bindings for the query.
-     * Supports:
-     * - ['id' => 5]
-     * - ['id' => [5, PDO::PARAM_INT]]
+     * The row is mapped according to the configured fetch mode: a schema instance when a `$schema`
+     * class is set, otherwise a `stdClass` object built from the associative row. The result is then
+     * passed through {@see AlterDocumentTrait::alter()} before being returned.
      *
-     * @param bool $throwable Whether to rethrow exceptions instead of handling them internally (default: false).
+     * When the statement cannot be prepared, fails to execute or returns no row, `null` is returned.
+     * On error the exception is caught and logged (or printed in CLI), unless `$throwable` is `true`
+     * in which case it is rethrown. The statement cursor is always closed in the `finally` block.
      *
-     * @return mixed|null The mapped result object, or null if no row is found.
+     * @param string $query     The SQL SELECT query to execute, using `:name` placeholders.
+     * @param array  $bindVars  Optional named-parameter bindings for the query. Supports:
+     *                          - `['id' => 5]`
+     *                          - `['id' => [5, PDO::PARAM_INT]]`
+     * @param bool   $throwable When `true`, query failures are rethrown instead of being logged and
+     *                          swallowed (default `false`).
      *
-     * @throws ContainerExceptionInterface If dependency resolution fails.
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface  If a required service is not found.
-     * @throws ReflectionException
+     * @return mixed The altered result object/schema instance, or `null` if no row is found or the query fails.
+     *
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
+     *
+     * @example
+     * ```php
+     * $user = $model->fetch( 'SELECT * FROM users WHERE id = :id' , [ 'id' => 123 ] );
+     *
+     * if ( $user !== null )
+     * {
+     *     echo $user->email;
+     * }
+     * ```
      */
     public function fetch
     (
@@ -180,26 +227,43 @@ trait PDOTrait
     }
 
     /**
-     * Execute a query and fetch all results.
+     * Executes a query and returns all of its rows at once.
      *
-     * Results are returned as an array of associative arrays or schema instances.
+     * Depending on the configured fetch mode, rows are returned as schema instances (when a `$schema`
+     * class is set) or as associative arrays. The non-empty result set is passed as a whole through
+     * {@see AlterDocumentTrait::alter()} so registered alterations apply to every element.
      *
-     * Alteration is applied via AlterDocumentTrait.
+     * An empty array is returned when the statement cannot be prepared, fails to execute or yields no
+     * rows. Errors are caught and logged unless `$throwable` is `true`. The cursor is always closed.
      *
-     * @param string $query   The query to execute.
-     * @param array $bindVars Optional named parameter bindings for the query.
-     * Supports:
-     * - ['id' => 5]
-     * - ['id' => [5, PDO::PARAM_INT]]
-     * @param bool $throwable Whether to rethrow exceptions instead of handling them internally (default: false).
+     * @param string $query     The SQL query to execute, using `:name` placeholders.
+     * @param array  $bindVars  Optional named-parameter bindings for the query. Supports:
+     *                          - `['id' => 5]`
+     *                          - `['id' => [5, PDO::PARAM_INT]]`
+     * @param bool   $throwable When `true`, query failures are rethrown instead of being logged and
+     *                          swallowed (default `false`).
      *
-     * @return array An array of results. Returns an empty array if the query fails and `$throwable` is false.
+     * @return array The altered list of results, or an empty array if the query yields nothing or
+     *               fails while `$throwable` is `false`.
      *
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws ReflectionException
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
+     *
+     * @example
+     * ```php
+     * $admins = $model->fetchAll(
+     *     'SELECT * FROM users WHERE role = :role' ,
+     *     [ 'role' => 'admin' ]
+     * );
+     *
+     * foreach ( $admins as $admin )
+     * {
+     *     // ...
+     * }
+     * ```
      */
     public function fetchAll
     (
@@ -259,21 +323,37 @@ trait PDOTrait
     }
 
     /**
-     * Execute a SELECT query and fetch all results as a generator.
-     * Results are yielded one by one as objects or schema instances.
-     * Alteration is applied via AlterDocumentTrait.
+     * Executes a SELECT query and streams its rows one by one through a generator.
      *
-     * @param string $query     The SQL query to execute.
-     * @param array  $bindVars  Optional bindings for the query.
-     * @param bool   $throwable Whether to rethrow exceptions instead of handling them internally (default: false).
+     * This is the memory-efficient counterpart of {@see PDOTrait::fetchAll()}: rows are never
+     * accumulated in an array. Each row is cast to an object (or hydrated into a schema instance via
+     * the configured fetch mode), passed through {@see AlterDocumentTrait::alter()} and yielded
+     * immediately. The cursor is closed once iteration completes or the generator is discarded.
      *
-     * @return Generator<object> A generator yielding results one by one.
+     * If the statement cannot be prepared or fails to execute, the generator simply yields nothing.
+     * Errors raised during iteration are logged unless `$throwable` is `true`.
      *
-     * @throws ContainerExceptionInterface
-     * @throws DependencyException
-     * @throws NotFoundException
-     * @throws NotFoundExceptionInterface
-     * @throws ReflectionException
+     * @param string $query     The SQL query to execute, using `:name` placeholders.
+     * @param array  $bindVars  Optional named-parameter bindings for the query (see {@see PDOTrait::bindValues()}).
+     * @param bool   $throwable When `true`, query failures are rethrown instead of being logged and
+     *                          swallowed (default `false`).
+     *
+     * @return Generator<object> A generator yielding the altered rows one at a time.
+     *
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
+     * @throws DependencyException If the dependency cannot be resolved by the container.
+     * @throws NotFoundException If no entry is found for the given identifier in the container.
+     * @throws ReflectionException If a class or property cannot be reflected (e.g. during hydration).
+     *
+     * @example
+     * ```php
+     * // Iterate over a million rows without exhausting memory
+     * foreach ( $model->fetchAllAsGenerator( 'SELECT * FROM events' ) as $event )
+     * {
+     *     $this->process( $event );
+     * }
+     * ```
      */
     public function fetchAllAsGenerator
     (
@@ -331,16 +411,32 @@ trait PDOTrait
     }
 
     /**
-     * Execute a query and return the value of a single column from the first row.
+     * Executes a query and returns the value of a single column from its first row.
      *
-     * @param string $query     The SQL query to execute.
-     * @param array  $bindVars  Optional bindings for the query.
-     * @param int    $column    Column index (0-based) to return from the first row.
-     * @param bool   $throwable Whether to rethrow exceptions instead of handling them internally (default: false).
+     * Unlike the other `fetch*` helpers this one does not apply schema mapping nor alterations — it
+     * returns the raw scalar produced by {@see PDOStatement::fetchColumn()}. Handy for `COUNT(*)`,
+     * `MAX(...)`, an existence check or fetching one field.
      *
-     * @return mixed The column value or null if the query fails.
+     * Returns `null` when the statement cannot be prepared, fails to execute or has no row. Errors
+     * are logged and swallowed unless `$throwable` is `true`. The cursor is always closed.
      *
-     * @throws Exception
+     * @param string $query     The SQL query to execute, using `:name` placeholders.
+     * @param array  $bindVars  Optional named-parameter bindings for the query (see {@see PDOTrait::bindValues()}).
+     * @param int    $column    Zero-based index of the column to return from the first row (default `0`).
+     * @param bool   $throwable When `true`, query failures are rethrown instead of being logged and
+     *                          swallowed (default `false`).
+     *
+     * @return mixed The column value, or `null` if no row is found or the query fails.
+     *
+     * @throws Exception If the SQL statement fails to prepare or execute and `$throwable` is `true`.
+     *
+     * @example
+     * ```php
+     * $total = (int) $model->fetchColumn(
+     *     'SELECT COUNT(*) FROM users WHERE active = :active' ,
+     *     [ 'active' => true ]
+     * );
+     * ```
      */
     public function fetchColumn
     (
@@ -393,15 +489,28 @@ trait PDOTrait
     }
 
     /**
-     * Fetch a list of single-column results.
+     * Executes a query and returns the first column of every row as a flat list.
      *
-     * @param string $query The SQL query to execute.
-     * @param array $bindVars Optional bindings for the query.
-     * @param bool $throwable Whether to rethrow exceptions instead of handling them internally (default: false).
+     * Uses `PDO::FETCH_COLUMN`, so a single-column SELECT yields a simple list of scalar values. Like
+     * {@see PDOTrait::fetchColumn()} it applies neither schema mapping nor alterations.
      *
-     * @return array<int, string>
+     * Returns an empty array when the statement cannot be prepared, fails to execute or has no rows.
+     * Errors are logged and swallowed unless `$throwable` is `true`. The cursor is always closed.
      *
-     * @throws Exception
+     * @param string $query     The SQL query to execute, using `:name` placeholders.
+     * @param array  $bindVars  Optional named-parameter bindings for the query (see {@see PDOTrait::bindValues()}).
+     * @param bool   $throwable When `true`, query failures are rethrown instead of being logged and
+     *                          swallowed (default `false`).
+     *
+     * @return array<int, string> The list of first-column values, or an empty array on failure.
+     *
+     * @throws Exception If the SQL statement fails to prepare or execute and `$throwable` is `true`.
+     *
+     * @example
+     * ```php
+     * $emails = $model->fetchColumnArray( 'SELECT email FROM users WHERE active = 1' );
+     * // [ 'a@example.com' , 'b@example.com' , ... ]
+     * ```
      */
     public function fetchColumnArray
     (
@@ -452,11 +561,14 @@ trait PDOTrait
     }
 
     /**
-     * Set the default fetch mode on the statement.
-     * Uses FETCH_ASSOC by default or FETCH_CLASS (with optional FETCH_PROPS_LATE)
-     * if a schema class is defined and exists.
+     * Configures the fetch mode of a statement just before rows are read.
      *
-     * @param PDOStatement $statement  The PDO statement to configure.
+     * When `$schema` names an existing class, rows are hydrated into instances of it via
+     * `PDO::FETCH_CLASS`, combined with `PDO::FETCH_PROPS_LATE` when `$deferAssignment` is `true`
+     * (so the constructor runs before columns are assigned). Otherwise the statement falls back to
+     * `PDO::FETCH_ASSOC`. Called internally by every `fetch*` helper.
+     *
+     * @param PDOStatement $statement The prepared, executed statement to configure.
      *
      * @return void
      */
@@ -478,9 +590,13 @@ trait PDOTrait
     }
 
     /**
-     * Initialize the 'deferAssignment' property.
-     * @param array $init
-     * @return static
+     * Initializes the `$deferAssignment` property from an options array.
+     *
+     * Reads the {@see ModelParam::DEFER_ASSIGNMENT} key when present, falling back to `false`.
+     *
+     * @param array $init Initialization options; the `deferAssignment` boolean key sets the property.
+     *
+     * @return static The current instance, i.e. `$this`, for fluent chaining.
      */
     public function initializeDeferAssignment( array $init = [] ):static
     {
@@ -489,15 +605,19 @@ trait PDOTrait
     }
 
     /**
-     * Initialize the PDO instance from a config array or dependency injection container.
+     * Initializes the `$pdo` connection from an options array or the DI container.
      *
-     * @param array         $init       Configuration array. Expects ModelParam::PDO ('pdo') as key.
-     * @param Container|null $container Optional DI container to resolve the PDO service.
+     * The {@see ModelParam::PDO} key may hold a {@see PDO} instance directly, or a string service id.
+     * When it is a string and the given container declares that id, the service is resolved from it.
+     * Any value that is not ultimately a {@see PDO} instance leaves `$pdo` set to `null`.
      *
-     * @return static
+     * @param array          $init      Configuration array; the `pdo` key holds a {@see PDO} instance or a container id.
+     * @param Container|null $container Optional DI container used to resolve a string PDO service id.
      *
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
+     * @return static The current instance, i.e. `$this`, for fluent chaining.
+     *
+     * @throws ContainerExceptionInterface If an error occurs while retrieving an entry from the dependency-injection container.
+     * @throws NotFoundExceptionInterface If no entry is found for the requested identifier in the container.
      */
     public function initializePDO( array $init = [] , ?Container $container = null ) :static
     {
@@ -511,8 +631,13 @@ trait PDOTrait
     }
 
     /**
-     * Indicates if the PDO is connected.
-     * @return bool
+     * Indicates whether a live PDO connection is currently available.
+     *
+     * Returns `false` when no PDO instance is configured. Otherwise it queries
+     * `PDO::ATTR_CONNECTION_STATUS`; a non-`null` status means the connection is up. Any
+     * {@see PDOException} raised while reading the attribute is treated as "not connected".
+     *
+     * @return bool `true` if a PDO instance is set and reports a connection status, `false` otherwise.
      */
     public function isConnected(): bool
     {
