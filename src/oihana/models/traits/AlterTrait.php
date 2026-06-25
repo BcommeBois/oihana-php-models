@@ -178,17 +178,18 @@ trait AlterTrait
      */
     protected function alterProperty
     (
-        string       $key ,
-        array|object $document ,
-        string|array $definition ,
+        string       $key         ,
+        array|object $document    ,
+        string|array $definition  ,
         ?Container   $container   = null ,
+        array        $context     = [] ,
     )
     : array|object
     {
         $definitions = toArray( $definition ) ;
         return $this->isChainedDefinition( $definitions )
-            ? $this->applyChainedAlterations ( $key , $document , $definitions , $container )
-            : $this->applySingleAlteration   ( $key , $document , $definitions , $container ) ;
+            ? $this->applyChainedAlterations ( $key , $document , $definitions , $container , $context )
+            : $this->applySingleAlteration   ( $key , $document , $definitions , $container , $context ) ;
     }
 
     /**
@@ -212,10 +213,11 @@ trait AlterTrait
      */
     protected function applyChainedAlterations
     (
-        string       $key ,
-        array|object $document ,
+        string       $key         ,
+        array|object $document    ,
         array        $definitions ,
         ?Container   $container   = null ,
+        array        $context     = [] ,
     )
     : array|object
     {
@@ -246,7 +248,8 @@ trait AlterTrait
                 $params      ,
                 $document    ,
                 $container   ,
-                $modified
+                $modified    ,
+                $context
             );
 
             if ( $modified )
@@ -276,10 +279,11 @@ trait AlterTrait
      */
     protected function applySingleAlteration
     (
-        string       $key ,
-        array|object $document ,
+        string       $key         ,
+        array|object $document    ,
         array        $definitions ,
         ?Container   $container   = null ,
+        array        $context     = [] ,
     )
     : array|object
     {
@@ -296,7 +300,8 @@ trait AlterTrait
             $params    ,
             $document  ,
             $container ,
-            $modified
+            $modified  ,
+            $context
         );
 
         return $modified ? setKeyValue( $document , $key , $value ) : $document;
@@ -312,6 +317,7 @@ trait AlterTrait
      * @param array|object $document  The full document (for context)
      * @param ?Container   $container An optional DI container reference.
      * @param bool         $modified  Output parameter indicating if the value was modified
+     * @param array        $context   Optional opaque context forwarded to the {@see Alter::MAP} callback; ignored by every other alteration.
      *
      * @return mixed The altered value
      *
@@ -323,13 +329,14 @@ trait AlterTrait
      */
     protected function executeAlteration
     (
-        string|Alter $alter ,
-        string       $key ,
-        mixed        $value ,
-        array        $params ,
+        string|Alter $alter     ,
+        string       $key       ,
+        mixed        $value     ,
+        array        $params    ,
         array|object &$document ,
         ?Container   $container = null ,
         bool         &$modified = false ,
+        array        $context   = [] ,
     )
     : mixed
     {
@@ -345,7 +352,7 @@ trait AlterTrait
             Alter::JSON_PARSE     => $this->alterJsonParseProperty     ( $value    , $params , $modified ) ,
             Alter::JSON_STRINGIFY => $this->alterJsonStringifyProperty ( $value    , $params , $modified ),
             Alter::LISTIFY        => $this->alterListifyProperty       ( $value    , $params , $modified ),
-            Alter::MAP            => $this->alterMapProperty           ( $document , $container , $key , $value , $params , $modified ),
+            Alter::MAP            => $this->alterMapProperty           ( $document , $container , $key , $value , $params , $modified , $context ),
             Alter::NORMALIZE      => $this->alterNormalizeProperty     ( $value    , $params , $modified ),
             Alter::NOT            => $this->alterNotProperty           ( $value    , $modified ),
             Alter::URL            => $this->alterUrlProperty           ( $document , $params , $container , $modified ) ,

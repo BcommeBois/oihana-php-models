@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `AlterDocumentTrait::alter()` gains an optional third argument `array $context = []`:
+  an opaque context threaded through the whole alteration chain — including the recursive
+  pass over a list of documents — and forwarded to every `Alter::MAP` callback as its
+  **6th argument** (`function ( $document , $container , $key , $value , $params , $context )`).
+  It lets a caller hand request-scoped information (a skin, a locale, the originating
+  request payload…) to `MAP` callbacks so they can pick their mapping strategy, with no
+  mutable shared state.
+
+### Notes
+- Fully backward compatible: the parameter defaults to `[]`, and a `MAP` callback that does
+  not declare the trailing `$context` keeps working unchanged (PHP discards the surplus
+  argument). The context is threaded by value, never stored on the instance, so it is
+  reentrant and needs no cleanup.
+- `Alter::CALL` intentionally does **not** receive the context: its callables are frequently
+  native PHP functions (`strtoupper`, `trim`, …) that reject extra arguments. A `CALL` that
+  needs the context should be promoted to `Alter::MAP`.
+
 ## [1.0.0] - 2026-06-20
 
 First release. The `oihana\models` namespace is extracted from

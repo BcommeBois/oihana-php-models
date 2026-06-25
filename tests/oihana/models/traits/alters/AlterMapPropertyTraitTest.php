@@ -54,4 +54,54 @@ final class AlterMapPropertyTraitTest extends TestCase
         $this->assertSame( 'unchanged' , $this->host->alterMapProperty( $document , null , 'k' , 'unchanged' , [] , $modified ) ) ;
         $this->assertFalse( $modified ) ;
     }
+
+    public function testForwardsTheContextToTheCallbackAsLastArgument(): void
+    {
+        $document = [] ;
+        $modified = false ;
+        $context  = [ 'skin' => 'full' , 'locale' => 'fr' ] ;
+
+        $seen     = null ;
+        $callback = function( $doc , $container , $key , $value , $params , $ctx = [] ) use ( &$seen )
+        {
+            $seen = $ctx ;
+            return $value ;
+        } ;
+
+        $this->host->alterMapProperty( $document , null , 'k' , 'v' , [ $callback ] , $modified , $context ) ;
+
+        $this->assertSame( $context , $seen ) ;
+        $this->assertTrue( $modified ) ;
+    }
+
+    public function testContextDefaultsToEmptyArrayWhenOmitted(): void
+    {
+        $document = [] ;
+        $modified = false ;
+
+        $seen     = null ;
+        $callback = function( $doc , $container , $key , $value , $params , $ctx = null ) use ( &$seen )
+        {
+            $seen = $ctx ;
+            return $value ;
+        } ;
+
+        $this->host->alterMapProperty( $document , null , 'k' , 'v' , [ $callback ] , $modified ) ;
+
+        $this->assertSame( [] , $seen ) ;
+    }
+
+    public function testLegacyFiveArgCallbackKeepsWorking(): void
+    {
+        $document = [] ;
+        $modified = false ;
+
+        // A callback that does NOT declare the trailing $context still works (PHP discards the surplus arg).
+        $callback = fn( $doc , $container , $key , $value , $params ) => strtoupper( (string) $value ) ;
+
+        $result = $this->host->alterMapProperty( $document , null , 'k' , 'abc' , [ $callback ] , $modified , [ 'skin' => 'full' ] ) ;
+
+        $this->assertSame( 'ABC' , $result ) ;
+        $this->assertTrue( $modified ) ;
+    }
 }

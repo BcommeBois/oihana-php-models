@@ -24,8 +24,11 @@ use function oihana\core\callables\resolveCallable;
  * callable via {@see resolveCallable()}), invoked with the signature:
  *
  * ```php
- * function map( array|object $document , ?Container $container , string $key , mixed $value , array $params = [] ): mixed
+ * function map( array|object $document , ?Container $container , string $key , mixed $value , array $params = [] , array $context = [] ): mixed
  * ```
+ *
+ * The optional `$context` is an opaque payload threaded from {@see AlterDocumentTrait::alter()}
+ * (a skin, a locale, the originating request…); a callback that does not declare it keeps working.
  *
  * The callable returns the new property value; when it is applied, the `$modified` flag is
  * set to `true`. When no callable is provided the original value is returned unchanged.
@@ -41,9 +44,17 @@ trait AlterMapPropertyTrait
      *
      * The first element of `$params` is treated as the callback (a callable or a string
      * resolvable via {@see resolveCallable()}); the remaining elements are forwarded to it as
-     * its `$params` argument. The callback receives the full document, the container, the key
-     * and the current value, and returns the new value. If `$params` is empty or the callback
-     * cannot be resolved to a callable, the original value is returned untouched.
+     * its `$params` argument. The callback receives the full document, the container, the key,
+     * the current value, its `$params` and finally the opaque `$context`, and returns the new
+     * value. If `$params` is empty or the callback cannot be resolved to a callable, the original
+     * value is returned untouched.
+     *
+     * The callback signature is:
+     * ```php
+     * function ( array|object $document , ?Container $container , string $key , mixed $value , array $params , array $context ) : mixed
+     * ```
+     * A callback that does not declare the trailing `$context` parameter keeps working unchanged
+     * (PHP discards the surplus argument), so the parameter is fully backward compatible.
      *
      * @param array|object   $document  The document (array or object) holding the property; passed
      *                                  by reference so the callback may read or adjust siblings.
@@ -54,6 +65,8 @@ trait AlterMapPropertyTrait
      * @param array          $params    Parameters whose first element is the callback (callable or
      *                                  resolvable string); any remaining elements are forwarded to it.
      * @param bool          &$modified  Output flag set to `true` when the callback is applied.
+     * @param array          $context   Optional opaque context forwarded as the callback's last argument
+     *                                  (e.g. the originating request payload, a skin, a locale…).
      *
      * @return mixed The value returned by the callback, or the original value when no callback applies.
      *
@@ -88,7 +101,8 @@ trait AlterMapPropertyTrait
         string       $key       ,
         mixed        $value     ,
         array        $params    = [] ,
-        bool         &$modified = false
+        bool         &$modified = false ,
+        array        $context   = []
     )
     : mixed
     {
@@ -101,12 +115,12 @@ trait AlterMapPropertyTrait
 
         if ( is_string( $callback ) )
         {
-            $callback = resolveCallable($callback);
+            $callback = resolveCallable( $callback );
         }
 
         if ( $callback !== null && is_callable( $callback ) )
         {
-            $value    = $callback( $document , $container , $key , $value , $params ) ;
+            $value    = $callback( $document , $container , $key , $value , $params , $context ) ;
             $modified = true ;
         }
 

@@ -603,6 +603,106 @@ class AlterDocumentTraitTest extends TestCase
         $this->assertSame(120, (int) $output['price']);
     }
 
+    // --------- Alter::MAP context
+
+    /**
+     * The opaque $context passed to alter() reaches the MAP callback as its 6th argument.
+     *
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testMapReceivesContextThreadedThroughAlter()
+    {
+        $seen = null ;
+
+        $processor = new MockAlterDocument
+        ([
+            'price' =>
+            [
+                Alter::MAP ,
+                function( array|object $document , ?Container $container , string $key , mixed $value , array $params = [] , array $context = [] ) use ( &$seen )
+                {
+                    $seen = $context ;
+                    return $value ;
+                }
+            ]
+        ]);
+
+        $context = [ 'skin' => 'full' , 'locale' => 'fr' ] ;
+        $processor->alter( [ 'price' => 100 ] , context: $context ) ;
+
+        $this->assertSame( $context , $seen ) ;
+    }
+
+    /**
+     * The context survives the recursive pass over a sequential array (list of documents):
+     * every element's MAP callback receives the same context.
+     *
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testMapReceivesContextThroughListRecursion()
+    {
+        $seen = [] ;
+
+        $processor = new MockAlterDocument
+        ([
+            'price' =>
+            [
+                Alter::MAP ,
+                function( array|object $document , ?Container $container , string $key , mixed $value , array $params = [] , array $context = [] ) use ( &$seen )
+                {
+                    $seen[] = $context ;
+                    return $value ;
+                }
+            ]
+        ]);
+
+        $context = [ 'skin' => 'identity' ] ;
+        $list    = [ [ 'price' => 1 ] , [ 'price' => 2 ] , [ 'price' => 3 ] ] ;
+
+        $processor->alter( $list , context: $context ) ;
+
+        $this->assertSame( [ $context , $context , $context ] , $seen ) ;
+    }
+
+    /**
+     * When no context is passed to alter(), the MAP callback receives an empty array.
+     *
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testMapContextDefaultsToEmptyArray()
+    {
+        $seen = 'untouched' ;
+
+        $processor = new MockAlterDocument
+        ([
+            'price' =>
+            [
+                Alter::MAP ,
+                function( array|object $document , ?Container $container , string $key , mixed $value , array $params = [] , array $context = [] ) use ( &$seen )
+                {
+                    $seen = $context ;
+                    return $value ;
+                }
+            ]
+        ]);
+
+        $processor->process( [ 'price' => 100 ] ) ;
+
+        $this->assertSame( [] , $seen ) ;
+    }
+
     // --------- Alter::LISTIFY
 
     /**

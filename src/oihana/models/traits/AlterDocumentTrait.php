@@ -103,6 +103,7 @@ trait AlterDocumentTrait
      *
      * @param mixed       $document The input to transform. Can be an associative array, object, or a list of items.
      * @param array|null  $alters   Optional temporary alter definitions for this call. Keys are property names, values are `Alter::` constants or arrays of chained alters.
+     * @param array       $context  Optional opaque context forwarded as-is to the {@see Alter::MAP} callback (e.g. the originating request payload, a skin, a locale…). Ignored by every other alteration. Threaded through the whole chain — including the recursive pass over a list — so it never relies on mutable shared state.
      *
      * @return mixed The transformed document, preserving the input structure (array, object, or list of arrays/objects).
      *
@@ -145,7 +146,7 @@ trait AlterDocumentTrait
      * // ]
      * ```
      */
-    public function alter( mixed $document , ?array $alters = null ) :mixed
+    public function alter( mixed $document , ?array $alters = null , array $context = [] ) :mixed
     {
         if ( !is_array( $document ) && !is_object( $document ) )
         {
@@ -161,14 +162,14 @@ trait AlterDocumentTrait
 
         if ( is_array( $document ) && !isAssociative( $document ) )
         {
-            return array_map( fn( $value ) => $this->alter( $value ) , $document ) ;
+            return array_map( fn( $value ) => $this->alter( $value , context: $context ) , $document ) ;
         }
 
         foreach ( $alters as $key => $definition )
         {
             if ( hasKeyValue( $document , $key ) )
             {
-                $document = $this->alterProperty( $key , $document , $definition , $this->container ) ;
+                $document = $this->alterProperty( $key , $document , $definition , $this->container , $context ) ;
             }
         }
 
