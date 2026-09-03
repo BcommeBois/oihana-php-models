@@ -1065,4 +1065,44 @@ class AlterDocumentTraitTest extends TestCase
 
         $this->assertSame( [ 'name' => 'Alice' ] , $processor->process([ 'name' => 'Alice' ]) ) ;
     }
+
+    // ------------------------------------------- the documentation, executed
+
+    /**
+     * Runs the example of {@see \oihana\models\traits\AlterDocumentTrait::alter()}
+     * and asserts it produces what its docblock promises.
+     *
+     * 🚨 It did not. The block advertised `Alter::TRIM` and `Alter::UPPERCASE`, neither
+     * of which exists in {@see Alter} ; and it announced `[ 'foo' , 'bar' ]` out of
+     * `'foo,bar'`, where `Alter::ARRAY` splits on a SEMICOLON. A reader copying it got
+     * a fatal on the first, a single-element array on the second.
+     *
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testTheDocumentedExampleProducesWhatItPromises(): void
+    {
+        $processor = new MockAlterDocument
+        ([
+            'price' => Alter::FLOAT ,
+            'tags'  => [ Alter::ARRAY , Alter::CLEAN ] ,
+            'name'  => [ [ Alter::CALL , 'trim' ] , [ Alter::CALL , 'strtoupper' ] ] ,
+        ]);
+
+        $output = $processor->process
+        ([
+            'price' => '19.99' ,
+            'tags'  => 'foo;bar' ,
+            'name'  => '  john  ' ,
+        ]);
+
+        $this->assertSame
+        (
+            [ 'price' => 19.99 , 'tags' => [ 'foo' , 'bar' ] , 'name' => 'JOHN' ] ,
+            $output
+        ) ;
+    }
 }

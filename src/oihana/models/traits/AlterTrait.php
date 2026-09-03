@@ -55,14 +55,14 @@ use function oihana\core\arrays\toArray;
  *             'score' => [ Alter::CALL , fn( $value ) => $value * 10 ],
  *             'total' => [ ALTER::MAP , fn( &$document ) => $document['price'] + ( $document['price'] * ( $document['vat'] ?? 0 ) ) ] ,
  *             'geo'   => [ Alter::NORMALIZE , [ Alter::HYDRATE , GeoCoordinates::class ] ],
- *             'name'  => [ Alter::TRIM , Alter::UPPERCASE , Alter::NORMALIZE ],
+ *             'name'  => [ [ Alter::CALL , 'trim' ] , [ Alter::CALL , 'strtoupper' ] ],
  *         ];
  *     }
  * }
  * ```
  *
  * Supported alteration types (see enum Alter):
- * - Alter::ARRAY           → Split string into array and apply sub-alters.
+ * - Alter::ARRAY           → Split a SEMICOLON-separated string into an array, then apply sub-alters to each element.
  * - Alter::CLEAN           → Remove empty/null elements from an array.
  * - Alter::CALL            → Call a function on the value.
  * - Alter::FLOAT           → Convert to float (or array of floats).
@@ -112,7 +112,7 @@ trait AlterTrait
      * - A string representing a single `Alter::` constant (e.g. `Alter::FLOAT`)
      * - An array with a single alteration and parameters: `[ Alter::URL , '/product/' ]`
      * - An array with chained alterations (NEW): `[ Alter::NORMALIZE , [ Alter::HYDRATE , Class::class ] ]`
-     * - An array with multiple simple alterations (NEW): `[ Alter::TRIM , Alter::UPPERCASE , Alter::NORMALIZE ]`
+     * - An array with multiple simple alterations (NEW): `[ Alter::FLOAT , Alter::INT ]`
      *
      * If the alteration modifies the value, the altered value is set back into the document.
      * Otherwise, the original document is returned unmodified.
@@ -157,7 +157,7 @@ trait AlterTrait
      *     'discount' => [ Alter::CALL , fn($v) => $v * 0.9 ], // Applies a callable
      *     'rating'   => [ Alter::VALUE , 5 ],                 // Fixed value replacement
      *     'geo'      => [ Alter::NORMALIZE , [ Alter::HYDRATE , GeoCoordinates::class ] ],
-     *     'name'     => [ Alter::TRIM , Alter::UPPERCASE , Alter::NORMALIZE ],
+     *     'name'     => [ [ Alter::CALL , 'trim' ] , [ Alter::CALL , 'strtoupper' ] ],
      * ];
      *
      * $document =

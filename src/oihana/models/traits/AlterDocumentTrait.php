@@ -41,14 +41,14 @@ use function oihana\core\arrays\isAssociative;
  *             'score' => [ Alter::CALL , fn( $value ) => $value * 10 ],
  *             'total' => [ ALTER::MAP , fn( &$document ) => $document['price'] + ( $document['price'] * ( $document['vat'] ?? 0 ) ) ] ,
  *             'geo'   => [ Alter::NORMALIZE , [ Alter::HYDRATE , GeoCoordinates::class ] ],
- *             'name'  => [ Alter::TRIM , Alter::UPPERCASE , Alter::NORMALIZE ],
+ *             'name'  => [ [ Alter::CALL , 'trim' ] , [ Alter::CALL , 'strtoupper' ] ],
  *         ];
  *     }
  * }
  * ```
  *
  * Supported alteration types (see enum Alter):
- * - Alter::ARRAY           → Split string into array and apply sub-alters.
+ * - Alter::ARRAY           → Split a SEMICOLON-separated string into an array, then apply sub-alters to each element.
  * - Alter::CLEAN           → Remove empty/null elements from an array.
  * - Alter::CALL            → Call a function on the value.
  * - Alter::FLOAT           → Convert to float (or array of floats).
@@ -57,6 +57,8 @@ use function oihana\core\arrays\isAssociative;
  * - Alter::INT             → Convert to integer (or array of integers).
  * - Alter::JSON_PARSE      → Parse JSON string.
  * - Alter::JSON_STRINGIFY  → Convert value to JSON string.
+ * - Alter::LIST            → Treat the value as a list of items.
+ * - Alter::LISTIFY         → Coerce the value into a list, wrapping a single item when needed.
  * - Alter::MAP             → Map a property of a document (or all the document structure) - Can transform or update the document.
  * - Alter::NORMALIZE       → Normalize a document property using configurable flags.
  * - Alter::NOT             → Invert boolean values.
@@ -124,14 +126,14 @@ trait AlterDocumentTrait
      *         $this->alters = [
      *             'price' => Alter::FLOAT,
      *             'tags'  => [ Alter::ARRAY, Alter::CLEAN ],
-     *             'name'  => [ Alter::TRIM, Alter::UPPERCASE ], // Chained alterations
+     *             'name'  => [ [ Alter::CALL , 'trim' ] , [ Alter::CALL , 'strtoupper' ] ], // Chained alterations
      *         ];
      *     }
      * }
      *
      * $input = [
      *     'price' => '19.99',
-     *     'tags'  => 'foo,bar',
+     *     'tags'  => 'foo;bar',
      *     'name'  => '  john  '
      * ];
      *

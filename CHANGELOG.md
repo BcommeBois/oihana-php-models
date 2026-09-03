@@ -31,6 +31,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one of those at once. Arrays are unaffected : `array_key_exists()` already asked the right
   question, and a key holding `null` has always been altered.
 
+### Documentation
+- The `AlterDocumentTrait` and `AlterTrait` docblocks advertised **two alterations that do not
+  exist** — `Alter::TRIM` and `Alter::UPPERCASE` — across five examples. A reader copying one got a
+  fatal on an undefined constant. Replaced by a real chain, `[ [ Alter::CALL , 'trim' ] ,
+  [ Alter::CALL , 'strtoupper' ] ]`, which produces the very output the block already announced.
+- The same blocks described `Alter::ARRAY` as splitting a string, without saying **on what** : it
+  splits on a **semicolon**. The worked example fed it `'foo,bar'` and announced `[ 'foo' , 'bar' ]`,
+  where the real answer is a single-element array. The input is now `'foo;bar'` and the promise holds.
+- Two real alterations were **missing from the supported list** : `Alter::LIST` and `Alter::LISTIFY`.
+- The worked example is now **executed by a test**, so the documentation cannot drift from the code
+  again without a suite going red.
+
 ### Notes
 - Fully backward compatible: the parameter defaults to `[]`, and a `MAP` callback that does
   not declare the trailing `$context` keeps working unchanged (PHP discards the surplus
