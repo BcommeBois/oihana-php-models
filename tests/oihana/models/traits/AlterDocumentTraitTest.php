@@ -17,6 +17,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use oihana\models\enums\Alter;
 
 use tests\oihana\models\mocks\MockAlterDocument;
+use tests\oihana\models\mocks\MockTypedDocument;
 
 class AlterDocumentTraitTest extends TestCase
 {
@@ -959,5 +960,109 @@ class AlterDocumentTraitTest extends TestCase
 
         // Fewer than 2 elements -> false.
         $this->assertFalse( $method->invoke( $processor , [ Alter::INT ] ) ) ;
+    }
+
+    // ------------------------------------- what the document actually carries
+
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testAnUninitializedTypedPropertyIsNotAltered(): void
+    {
+        // 🚨 The defect this guard exists for. `property_exists()` is true of a
+        // declared property from the start, so the chain used to run over nothing
+        // and write its result back : `Alter::ARRAY` yields `[]`, and an empty
+        // array asserts « we looked, there is none » where nobody supplied a thing.
+        $processor = new MockAlterDocument([ 'tags' => [ Alter::ARRAY , Alter::CLEAN ] ]) ;
+
+        $output = $processor->process( new MockTypedDocument() ) ;
+
+        $this->assertFalse( ( new \ReflectionProperty( $output , 'tags' ) )->isInitialized( $output ) ) ;
+    }
+
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testAPropertyHoldingNullIsStillAltered(): void
+    {
+        // 🔑 Initialized, not non-null. A great many properties are declared
+        // `= null` and altered on purpose ; a guard reading null as absence would
+        // silence every one of them at once.
+        $processor = new MockAlterDocument([ 'labels' => [ Alter::VALUE , [ 'kept' ] ] ]) ;
+
+        $output = $processor->process( new MockTypedDocument() ) ;
+
+        $this->assertSame( [ 'kept' ] , $output->labels ) ;
+    }
+
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testAPropertyFilledBeforehandIsStillAltered(): void
+    {
+        // An empty array IS a value : someone stated it, and the alteration keeps
+        // running over it. This is what protects a legitimate `[]` from the guard.
+        $document       = new MockTypedDocument() ;
+        $document->tags = [] ;
+
+        $processor = new MockAlterDocument([ 'tags' => [ Alter::VALUE , [ 'a' ] ] ]) ;
+
+        $this->assertSame( [ 'a' ] , $processor->process( $document )->tags ) ;
+    }
+
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testAValuedPropertyIsStillAltered(): void
+    {
+        $processor = new MockAlterDocument([ 'name' => [ Alter::CALL , 'strtoupper' ] ]) ;
+
+        $this->assertSame( 'ALICE' , $processor->process( new MockTypedDocument( 'alice' ) )->name ) ;
+    }
+
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testAnArrayKeyHoldingNullIsStillAltered(): void
+    {
+        // Arrays never changed : `array_key_exists()` already asked the right
+        // question, and a key holding null has always been altered.
+        $processor = new MockAlterDocument([ 'labels' => [ Alter::VALUE , [ 'kept' ] ] ]) ;
+
+        $this->assertSame( [ 'kept' ] , $processor->process([ 'labels' => null ])[ 'labels' ] ) ;
+    }
+
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws NotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws DependencyException
+     * @throws ReflectionException
+     */
+    public function testAnAbsentArrayKeyIsStillNotAltered(): void
+    {
+        $processor = new MockAlterDocument([ 'labels' => [ Alter::VALUE , [ 'kept' ] ] ]) ;
+
+        $this->assertSame( [ 'name' => 'Alice' ] , $processor->process([ 'name' => 'Alice' ]) ) ;
     }
 }

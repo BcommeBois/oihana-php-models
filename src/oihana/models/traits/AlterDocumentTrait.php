@@ -13,7 +13,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use oihana\models\enums\ModelParam;
 use oihana\traits\ContainerTrait;
 
-use function oihana\core\accessors\hasKeyValue;
+use function oihana\core\accessors\carriesKeyValue;
 use function oihana\core\arrays\isAssociative;
 
 /**
@@ -165,9 +165,18 @@ trait AlterDocumentTrait
             return array_map( fn( $value ) => $this->alter( $value , context: $context ) , $document ) ;
         }
 
+        // 🚨 `carriesKeyValue()` and not `hasKeyValue()`, and the difference is the
+        // whole guard. On an object the latter falls back on `property_exists()`,
+        // which is true of every property the CLASS declares — so a typed property
+        // no source ever filled was altered like any other, and whatever the chain
+        // computed from nothing was written back onto the document. `Alter::ARRAY`
+        // over an uninitialized property yields `[]`, and an empty array is an
+        // assertion : it reads « we looked, there is none » where the truth is
+        // « nobody supplied this ». A field absent from a projection came back
+        // stated. See {@see carriesKeyValue()} for why `null` still passes.
         foreach ( $alters as $key => $definition )
         {
-            if ( hasKeyValue( $document , $key ) )
+            if ( carriesKeyValue( $document , $key ) )
             {
                 $document = $this->alterProperty( $key , $document , $definition , $this->container , $context ) ;
             }

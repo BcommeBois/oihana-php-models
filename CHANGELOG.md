@@ -16,6 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request payload…) to `MAP` callbacks so they can pick their mapping strategy, with no
   mutable shared state.
 
+### Fixed
+- `AlterDocumentTrait::alter()` no longer alters a property the document does not carry.
+  The guard asked `hasKeyValue()`, which on an object falls back on `property_exists()` —
+  true of every property the **class** declares, initialized or not. A typed property no
+  source ever filled was therefore altered like any other, and whatever the chain computed
+  from nothing was written back onto the document : `Alter::ARRAY` over an uninitialized
+  property yields `[]`, and an empty array is an assertion — it reads « we looked, there is
+  none » where the truth is « nobody supplied this ». A field absent from a projection came
+  back **stated**. The guard now asks `carriesKeyValue()` (`oihana/php-core` 1.2.0), which
+  answers whether the document *holds* a value.
+- 🔑 **Initialized, never non-null** : a property holding `null` is still altered, as before —
+  declaring `= null` is commonplace and reading `null` as absence would have silenced every
+  one of those at once. Arrays are unaffected : `array_key_exists()` already asked the right
+  question, and a key holding `null` has always been altered.
+
 ### Notes
 - Fully backward compatible: the parameter defaults to `[]`, and a `MAP` callback that does
   not declare the trailing `$context` keeps working unchanged (PHP discards the surplus
